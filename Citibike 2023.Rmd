@@ -1,0 +1,208 @@
+---
+title: "Citibike 2023"
+author: "Jana Choe"
+date: "2026-02-13"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r}
+library(tidyverse)
+library(lubridate)
+```
+Here's an example of data preprocessing using january:
+```{r}
+jan_1 <- read.csv(file = "~/Downloads/2023-citibike-tripdata/202301-citibike-tripdata_1.csv", header = T)
+head(jan_1, 20) #before preprocessing the data
+```
+
+```{r}
+jan_1 <- jan_1 %>%
+  drop_na() %>%
+  select(
+    -ride_id,
+    -start_station_name, -start_station_id,
+    -end_station_name, -end_station_id,
+    -start_lat, -start_lng, -end_lat, -end_lng
+  ) %>%
+  mutate(
+    started_at=ymd_hms(started_at),
+    ended_at= ymd_hms(ended_at),
+
+    start_date= as_date(started_at),
+    end_date = as_date(ended_at),
+    trip_duration_min = as.numeric(
+      difftime(ended_at, started_at, units = "mins") # units in min!
+    ),
+    start_time = format(started_at, "%H:%M:%S"),
+    end_time   = format(ended_at, "%H:%M:%S")
+  ) %>%
+  filter(start_date == end_date) %>% # drop overnight trips
+  filter(trip_duration_min > 0,
+         trip_duration_min < 1440) %>% # drop nonsensical durations
+  mutate(
+    start_date = format(start_date, "%m-%d") # drop year
+  ) %>%
+  select(
+    -ended_at,
+    -end_date,
+    -started_at
+  ) %>%
+  arrange(start_date)
+
+head(jan_1)
+
+```
+```{r}
+jan_2 <- read.csv(file="~/Downloads/2023-citibike-tripdata/202301-citibike-tripdata_2.csv", header = T)
+
+jan_2 <- jan_2 %>%
+  drop_na() %>%
+  select(
+    -ride_id,
+    -start_station_name, -start_station_id,
+    -end_station_name, -end_station_id,
+    -start_lat, -start_lng, -end_lat, -end_lng
+  ) %>%
+  mutate(
+    started_at=ymd_hms(started_at),
+    ended_at= ymd_hms(ended_at),
+
+    start_date= as_date(started_at),
+    end_date = as_date(ended_at),
+    trip_duration_min = as.numeric(
+      difftime(ended_at, started_at, units = "mins") # units in min!
+    ),
+    start_time = format(started_at, "%H:%M:%S"),
+    end_time   = format(ended_at, "%H:%M:%S")
+  ) %>%
+  filter(start_date == end_date) %>% # drop overnight trips
+  filter(trip_duration_min > 0,
+         trip_duration_min < 1440) %>% # drop nonsensical durations
+  mutate(
+    start_date = format(start_date, "%m-%d") # drop year
+  ) %>%
+  select(
+    -ended_at,
+    -end_date,
+    -started_at
+  ) %>%
+  arrange(start_date)
+
+tail(jan_2)
+```
+Binding the two dataset:
+```{r}
+january <- bind_rows(jan_1, jan_2) %>%
+  group_by(start_date) %>%
+  summarise(
+    trips = n(), # number of rides taken in a given day
+    
+    total_time = sum(trip_duration_min, na.rm = TRUE), #combined time traveled
+    avg_time   = mean(trip_duration_min, na.rm = TRUE), # average time travel;ed
+
+    member_percent = mean(member_casual == "member", na.rm = TRUE),
+    casual_percent = mean(member_casual == "casual", na.rm = TRUE),
+
+    ebike_percent   = mean(rideable_type == "electric_bike", na.rm = TRUE),
+    regular_percent = mean(rideable_type == "classic_bike",  na.rm = TRUE),
+
+    .groups = "drop"
+  ) %>%
+  mutate(
+    member_percent  = 100 * member_percent,  # percentages of member
+    casual_percent  = 100 * casual_percent,  # percentages of casual
+    ebike_percent   = 100 * ebike_percent, # percentage of ebike
+    regular_percent = 100 * regular_percent # percentage of regular
+  ) %>%
+  arrange(start_date)
+
+
+head(january)
+```
+This must be repeated 11 times (for all the month of year), so a function:
+```{r}
+files <- list.files(
+  path = "~/Downloads/2023-citibike-tripdata/",
+  pattern = "*.csv",
+  full.names = TRUE
+)
+```
+```{r}
+clean_file <- function(path) {
+  read.csv(path, header = TRUE) %>%
+    drop_na() %>%
+    select(
+      -ride_id,
+      -start_station_name, -start_station_id,
+      -end_station_name,   -end_station_id,
+      -start_lat, -start_lng, -end_lat, -end_lng
+    ) %>%
+    mutate(
+      started_at = ymd_hms(started_at),
+      ended_at   = ymd_hms(ended_at),
+      start_date = as_date(started_at),
+      end_date   = as_date(ended_at),
+      trip_duration_min = as.numeric(difftime(ended_at, started_at, units = "mins")),
+      start_time = format(started_at, "%H:%M:%S"),
+      end_time   = format(ended_at, "%H:%M:%S")
+    ) %>%
+    filter(start_date == end_date) %>%
+    filter(trip_duration_min > 0, trip_duration_min < 1440) %>%
+    mutate(
+      start_date_full = start_date, 
+      # real date for sorting (and maybe if wwe later decide to do more year)
+      start_date = format(start_date, "%m-%d")
+    ) %>%
+    select(-ended_at, -end_date, -started_at) %>%
+    arrange(start_date_full) # no need of the whol year
+}
+```
+```{r}
+files <- list.files(
+  path = "~/Downloads/2023-citibike-tripdata/",
+  pattern = "2023.*\\.csv$",
+  full.names = TRUE,
+  recursive = TRUE
+)
+
+all_2023 <- map_dfr(files, clean_file)
+```
+```{r}
+# making sure there is only two types for each
+unique(all_2023$rideable_type)
+unique(all_2023$member_casual)
+```
+```{r}
+citibike_summary_2023 <- all_2023 %>%
+  group_by(start_date_full) %>%
+  summarise(
+    trips = n(),
+    total_time = sum(trip_duration_min, na.rm = TRUE),
+    avg_time   = mean(trip_duration_min, na.rm = TRUE),
+
+    member_percent = mean(member_casual == "member", na.rm = TRUE) * 100,
+    casual_percent = mean(member_casual == "casual", na.rm = TRUE) * 100,
+
+    ebike_percent   = mean(rideable_type == "electric_bike", na.rm = TRUE) * 100,
+    regular_percent = mean(rideable_type == "classic_bike",  na.rm = TRUE) * 100,
+
+    .groups = "drop"
+  ) %>%
+  arrange(start_date_full) %>%
+  mutate(date = format(start_date_full, "%m-%d")) %>%  
+  select(date, everything(), -start_date_full)
+tail(citibike_summary_2023)
+
+#total number of trips
+# total time (combined) in minutes
+#average time (of the day) in minutes
+# percent whether member or casual rider
+# percent whether ebike or regular bike
+```
+```{r}
+write.csv(citibike_summary_2023,
+          "~/Downloads/citibike_summary_2023.csv",
+          row.names = FALSE)
+```
