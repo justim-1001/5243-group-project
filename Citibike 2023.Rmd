@@ -77,11 +77,11 @@ jan_2 <- jan_2 %>%
     start_time = format(started_at, "%H:%M:%S"),
     end_time   = format(ended_at, "%H:%M:%S")
   ) %>%
-  filter(start_date == end_date) %>% # drop overnight trips
+  filter(start_date == end_date) %>% 
   filter(trip_duration_min > 0,
-         trip_duration_min < 1440) %>% # drop nonsensical durations
+         trip_duration_min < 1440) %>% 
   mutate(
-    start_date = format(start_date, "%m-%d") # drop year
+    start_date = format(start_date, "%m-%d") 
   ) %>%
   select(
     -ended_at,
