@@ -1,2 +1,2 @@
 # 5243-group-project
-## First run Citibike 2023.Rmd and project 1_weather.py to deal with two raw datasets to get citibike_summary_2023 and weather_clean_2023, then run merge_data.py to get the merged data and preprocessed data.
+## First run Citibike 2023.Rmd and project 1_weather.py to deal with two raw datasets to get citibike_summary_2023 and weather_clean_2023, then run merge_data.py to get the merged data and preprocessed data. Note that the Citibike raw data was too large to be uploaded (1.6 GB when compressed, so only a portion of the file - January - was uploaded, the other months will be of the same format) The grader can see how the code would run by using January, the rest of the code was preprocessed the same way. 
