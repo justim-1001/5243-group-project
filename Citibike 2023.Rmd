@@ -7,6 +7,8 @@ output:
   html_document: default
 ---
 Note that we couldn't upload the entire dataset as the entire zip file is 1.2 GB; instead we are uploading parts of the original dataset and will also include the knitted version for the grader to see what the code looks like
+
+Please look at the pdf version, even january was too big to upload
 ```{r}
 library(tidyverse)
 library(lubridate)
